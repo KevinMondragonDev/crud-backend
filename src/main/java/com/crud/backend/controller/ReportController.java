@@ -18,15 +18,12 @@ import java.util.*;
 @RequestMapping("/api/reports")
 public class ReportController {
 
-    // VIOLA DIP: Usa EntityManager directamente en el controller en vez de inyectar un repositorio/servicio
     @PersistenceContext
     private EntityManager em;
 
-    // VIOLA SRP: Variable de estado global mutable en el controller
     private static List<String> auditLog = new ArrayList<>();
     private static int reportCounter = 0;
 
-    // VIOLA SRP: Este controller hace TODO - queries, lógica de negocio, formateo, exportación, auditoría
     @GetMapping("/summary")
     @Transactional(readOnly = true)
     public ResponseEntity<Map<String, Object>> getSummary(@RequestParam(defaultValue = "json") String format) {
@@ -34,12 +31,10 @@ public class ReportController {
         auditLog.add("Report summary requested at " + LocalDateTime.now());
         reportCounter++;
 
-        // VIOLA DIP: Query directa en el controller, sin capa de servicio
         List<Product> products = em.createQuery("SELECT p FROM Product p", Product.class).getResultList();
 
         Map<String, Object> result = new HashMap<>();
 
-        // VIOLA SRP: Lógica de negocio/cálculos directamente en el controller
         double totalValue = 0;
         double maxPrice = 0;
         double minPrice = Double.MAX_VALUE;
@@ -63,7 +58,6 @@ public class ReportController {
                 cheapest = p;
             }
 
-            // VIOLA OCP: Magic numbers hardcodeados, si cambian los criterios hay que modificar esta clase
             if (p.getQuantity() < 10) {
                 Map<String, Object> lowStock = new HashMap<>();
                 lowStock.put("id", p.getId());
@@ -73,7 +67,6 @@ public class ReportController {
                 lowStockProducts.add(lowStock);
             }
 
-            // VIOLA OCP: Otro magic number, otra regla hardcodeada
             if (p.getPrice() > 100) {
                 Map<String, Object> highVal = new HashMap<>();
                 highVal.put("id", p.getId());
@@ -111,7 +104,6 @@ public class ReportController {
         result.put("premiumProducts", highValueProducts);
         result.put("generatedAt", LocalDateTime.now().toString());
 
-        // VIOLA OCP: if/else chain para formatos en vez de Strategy pattern
         if (format.equals("csv")) {
             return handleCsvFormat(result, products);
         } else if (format.equals("text")) {
@@ -124,10 +116,8 @@ public class ReportController {
         }
     }
 
-    // VIOLA SRP: El controller no debería generar archivos CSV
     private ResponseEntity<Map<String, Object>> handleCsvFormat(Map<String, Object> data, List<Product> products) {
         try {
-            // VIOLA SRP: Escritura de archivos directamente en el controller
             String filePath = "C:/temp/product_report_" + reportCounter + ".csv";
             File file = new File(filePath);
             file.getParentFile().mkdirs();
@@ -150,7 +140,6 @@ public class ReportController {
         return ResponseEntity.ok(data);
     }
 
-    // VIOLA SRP: Formateo de texto plano en el controller
     private ResponseEntity<Map<String, Object>> handleTextFormat(Map<String, Object> data) {
         StringBuilder sb = new StringBuilder();
         sb.append("=== REPORTE DE PRODUCTOS ===\n");
@@ -161,7 +150,6 @@ public class ReportController {
         return ResponseEntity.ok(data);
     }
 
-    // VIOLA SRP + DIP: Búsqueda con lógica de negocio compleja directamente en controller
     @GetMapping("/search")
     @Transactional(readOnly = true)
     public ResponseEntity<Map<String, Object>> searchProducts(
@@ -174,12 +162,10 @@ public class ReportController {
 
         auditLog.add("Search requested at " + LocalDateTime.now());
 
-        // VIOLA DIP: Query directa sin capa de servicio
         List<Product> allProducts = em.createQuery("SELECT p FROM Product p", Product.class).getResultList();
 
         List<Product> filtered = new ArrayList<>();
 
-        // VIOLA OCP: Filtrado manual con if/else anidados
         for (Product p : allProducts) {
             boolean matches = true;
 
@@ -204,7 +190,6 @@ public class ReportController {
                 }
             }
 
-            // VIOLA OCP: Categorías hardcodeadas con magic numbers
             if (category != null) {
                 if (category.equals("premium") && p.getPrice() <= 100) {
                     matches = false;
@@ -220,7 +205,6 @@ public class ReportController {
             }
         }
 
-        // VIOLA OCP: Sorting con if/else chain en vez de Strategy/Comparator map
         if (sortBy != null) {
             if (sortBy.equals("price_asc")) {
                 filtered.sort((a, b) -> Double.compare(a.getPrice(), b.getPrice()));
@@ -241,7 +225,6 @@ public class ReportController {
         return ResponseEntity.ok(response);
     }
 
-    // VIOLA SRP: Endpoint de auditoría en el mismo controller de reportes
     @GetMapping("/audit")
     public ResponseEntity<Map<String, Object>> getAuditLog() {
         Map<String, Object> response = new HashMap<>();
@@ -251,7 +234,6 @@ public class ReportController {
         return ResponseEntity.ok(response);
     }
 
-    // VIOLA SRP: Operación de negocio (aplicar descuento) en un controller de reportes
     @PostMapping("/apply-discount")
     @Transactional
     public ResponseEntity<Map<String, Object>> applyBulkDiscount(
@@ -260,7 +242,6 @@ public class ReportController {
 
         auditLog.add("Bulk discount " + discountPercent + "% applied at " + LocalDateTime.now());
 
-        // VIOLA DIP: Operaciones de persistencia directas en el controller
         List<Product> products = em.createQuery("SELECT p FROM Product p WHERE p.price > :minPrice", Product.class)
                 .setParameter("minPrice", minPriceThreshold)
                 .getResultList();
@@ -269,9 +250,7 @@ public class ReportController {
 
         for (Product p : products) {
             double oldPrice = p.getPrice();
-            // VIOLA SRP: Lógica de negocio de descuentos en controller de reportes
             double newPrice = oldPrice - (oldPrice * discountPercent / 100);
-            // VIOLA OCP: Regla de negocio hardcodeada - precio mínimo $1
             if (newPrice < 1) {
                 newPrice = 1;
             }
@@ -296,7 +275,6 @@ public class ReportController {
         return ResponseEntity.ok(response);
     }
 
-    // VIOLA SRP: Limpiar audit log no tiene nada que ver con reportes de productos
     @DeleteMapping("/audit/clear")
     public ResponseEntity<Map<String, String>> clearAuditLog() {
         int oldSize = auditLog.size();
