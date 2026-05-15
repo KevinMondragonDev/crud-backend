@@ -1,0 +1,142 @@
+{
+  "PROYECTO_NOMBRE": "CRUD Backend - API REST de Gestión de Productos",
+  "VERSION": "1.0.0",
+  "FECHA": "2026-05-15",
+  "AUTOR": "Kevin Mondragón",
+  "ESTADO": "En desarrollo",
+
+  "INTRODUCCION": "El presente documento describe los requerimientos del sistema CRUD Backend, una API REST desarrollada en Java 21 con Spring MVC 6.1.8 y Hibernate 6.4.4 que implementa las operaciones CRUD (Create, Read, Update, Delete) para la gestión de productos. El sistema se despliega como archivo WAR sobre Apache Tomcat 10.1, utiliza MySQL como base de datos relacional con HikariCP como pool de conexiones, y expone endpoints RESTful con serialización JSON mediante Jackson 2.17.",
+  "PROPOSITO": "Definir de manera formal los requerimientos funcionales y no funcionales del sistema CRUD Backend, así como establecer la matriz de pruebas que garantice la calidad del software basándose exclusivamente en el código fuente como fuente de verdad técnica.",
+  "ALCANCE": "El sistema abarca la gestión completa del ciclo de vida de productos (crear, listar, consultar por ID, actualizar y eliminar) a través de una API REST. Incluye validación de datos de entrada con Jakarta Bean Validation, manejo centralizado de excepciones, configuración CORS para permitir acceso desde cualquier origen, gestión transaccional con Spring TX, y persistencia en MySQL con Hibernate ORM. El despliegue se realiza mediante contenedor Docker con Tomcat.",
+  "DESCRIPCION_GENERAL": "CRUD Backend es una API REST Java que implementa un sistema de gestión de productos con arquitectura en capas: Controller (ProductController + GlobalExceptionHandler), Service (ProductService), Repository (ProductRepository), y Model (Product). La configuración se maneja mediante clases Java (AppConfig, WebConfig, AppInitializer) sin archivos XML. El sistema soporta operaciones CRUD completas sobre la entidad Product con campos: id, name, description, price, quantity, createdAt, updatedAt. Utiliza JPA/Hibernate para persistencia, con timestamps automáticos via @PrePersist y @PreUpdate.",
+  "STACK_TECNOLOGICO": "- Lenguaje: Java 21\n- Framework Web: Spring MVC 6.1.8\n- ORM: Hibernate 6.4.4 (JPA)\n- Base de Datos: MySQL 8.x (conector mysql-connector-j 8.3.0)\n- Connection Pool: HikariCP 5.1.0\n- Serialización JSON: Jackson 2.17.0 con soporte Java Time (JSR-310)\n- Validación: Hibernate Validator 8.0.1 (Jakarta Bean Validation)\n- Servidor: Apache Tomcat 10.1 (Servlet API Jakarta 6.0)\n- Build System: Apache Maven\n- Empaquetado: WAR\n- Contenedorización: Docker (multi-stage build)\n- Codificación: UTF-8 (CharacterEncodingFilter)",
+
+  "REQ001_ID": "RF-001",
+  "REQ001_DESC": "El sistema debe permitir crear un producto nuevo mediante una petición POST a /api/products con un cuerpo JSON que contenga name (obligatorio), description (opcional), price (obligatorio, positivo) y quantity (obligatorio, positivo). Debe retornar el producto creado con HTTP 201.",
+  "REQ001_PRIORIDAD": "Alta",
+  "REQ001_FUENTE": "ProductController.java:36-40 - Método create() con @PostMapping, @Valid @RequestBody, retorna ResponseEntity.status(CREATED). Product.java:17-31 - Validaciones @NotBlank, @NotNull, @Positive",
+
+  "REQ002_ID": "RF-002",
+  "REQ002_DESC": "El sistema debe permitir consultar todos los productos mediante GET /api/products, retornando una lista JSON ordenada por ID descendente con HTTP 200.",
+  "REQ002_PRIORIDAD": "Alta",
+  "REQ002_FUENTE": "ProductController.java:24-27 - Método getAll() con @GetMapping. ProductRepository.java:17-19 - Query JPQL 'SELECT p FROM Product p ORDER BY p.id DESC'",
+
+  "REQ003_ID": "RF-003",
+  "REQ003_DESC": "El sistema debe permitir consultar un producto por su ID mediante GET /api/products/{id}. Si existe, retorna HTTP 200 con el producto; si no existe, retorna HTTP 404.",
+  "REQ003_PRIORIDAD": "Alta",
+  "REQ003_FUENTE": "ProductController.java:29-34 - Método getById() con @GetMapping('/{id}'), usa Optional.map para retornar ok() o notFound(). ProductRepository.java:22-25 - findById() con Optional.ofNullable",
+
+  "REQ004_ID": "RF-004",
+  "REQ004_DESC": "El sistema debe permitir actualizar un producto existente mediante PUT /api/products/{id} con un cuerpo JSON validado. Actualiza name, description, price y quantity. Si el producto no existe, retorna HTTP 404.",
+  "REQ004_PRIORIDAD": "Alta",
+  "REQ004_FUENTE": "ProductController.java:42-50 - Método update() con @PutMapping('/{id}'). ProductService.java:35-43 - update() que busca por ID, actualiza campos y persiste. Product.java:45-48 - @PreUpdate actualiza updatedAt automáticamente",
+
+  "REQ005_ID": "RF-005",
+  "REQ005_DESC": "El sistema debe permitir eliminar un producto por su ID mediante DELETE /api/products/{id}. Si existe, lo elimina y retorna HTTP 200 con mensaje de confirmación. Si no existe, retorna HTTP 404.",
+  "REQ005_PRIORIDAD": "Alta",
+  "REQ005_FUENTE": "ProductController.java:52-62 - Método delete() con @DeleteMapping('/{id}'). ProductService.java:45-50 - deleteById() que verifica existencia antes de eliminar con RuntimeException",
+
+  "RNF001_ID": "RNF-001",
+  "RNF001_DESC": "El sistema debe soportar CORS (Cross-Origin Resource Sharing) permitiendo peticiones desde cualquier origen (*), con métodos GET, POST, PUT, DELETE y OPTIONS, y todos los headers.",
+  "RNF001_CATEGORIA": "Seguridad/Interoperabilidad",
+
+  "RNF002_ID": "RNF-002",
+  "RNF002_DESC": "El sistema debe gestionar un pool de conexiones a base de datos MySQL mediante HikariCP con un máximo de 10 conexiones simultáneas. La configuración de conexión debe ser parametrizable mediante variables de entorno (MYSQL_URL, MYSQL_USER, MYSQL_PASSWORD).",
+  "RNF002_CATEGORIA": "Rendimiento/Configurabilidad",
+
+  "RNF003_ID": "RNF-003",
+  "RNF003_DESC": "El sistema debe manejar excepciones de forma centralizada mediante @RestControllerAdvice, retornando respuestas JSON con campos 'error' y 'message', y registrando el stack trace completo en stderr. El esquema de base de datos se actualiza automáticamente con hibernate.hbm2ddl.auto=update.",
+  "RNF003_CATEGORIA": "Mantenibilidad/Observabilidad",
+
+  "ESC001_ID": "ESC-001",
+  "ESC001_DESC": "Flujo CRUD completo exitoso: Crear un producto, consultarlo por ID, actualizar sus datos, listar todos los productos, y eliminarlo.",
+  "ESC001_PRECONDICIONES": "La API está desplegada y conectada a MySQL. La base de datos crud_db existe y es accesible.",
+  "ESC001_RESULTADO": "Cada operación retorna el código HTTP esperado (201, 200, 200, 200, 200) con los datos correctos del producto en formato JSON.",
+
+  "ESC002_ID": "ESC-002",
+  "ESC002_DESC": "Validación de datos de entrada: Enviar un producto con campos inválidos (name vacío, price negativo, quantity null).",
+  "ESC002_PRECONDICIONES": "La API está desplegada y operativa.",
+  "ESC002_RESULTADO": "El sistema rechaza la petición y retorna un error de validación indicando los campos que no cumplen las restricciones (@NotBlank, @Positive, @NotNull).",
+
+  "ESC003_ID": "ESC-003",
+  "ESC003_DESC": "Operación sobre recurso inexistente: Intentar consultar, actualizar y eliminar un producto con un ID que no existe en la base de datos.",
+  "ESC003_PRECONDICIONES": "La API está desplegada. No existe un producto con el ID utilizado en las pruebas.",
+  "ESC003_RESULTADO": "Las operaciones GET, PUT y DELETE retornan HTTP 404 (Not Found) sin causar errores internos del servidor.",
+
+  "CP001_ID": "CP-001",
+  "CP001_ESCENARIO": "ESC-001",
+  "CP001_DATOS": "POST /api/products con body: {\"name\": \"Laptop HP\", \"description\": \"Laptop 15 pulgadas\", \"price\": 15999.99, \"quantity\": 10}",
+  "CP001_PASOS": "1. Enviar POST /api/products con el body JSON\n2. Verificar respuesta HTTP 201\n3. Verificar que el body de respuesta contiene id generado, name, description, price, quantity, createdAt y updatedAt\n4. Enviar GET /api/products/{id} con el ID retornado\n5. Verificar HTTP 200 y datos coincidentes\n6. Enviar PUT /api/products/{id} con price: 14999.99\n7. Verificar HTTP 200 y precio actualizado\n8. Enviar DELETE /api/products/{id}\n9. Verificar HTTP 200 con mensaje 'Producto eliminado correctamente'\n10. Enviar GET /api/products/{id} y verificar HTTP 404",
+  "CP001_ESPERADO": "POST retorna 201 con producto creado. GET retorna 200. PUT retorna 200 con datos actualizados. DELETE retorna 200 con mensaje de confirmación. GET final retorna 404.",
+  "CP001_OBTENIDO": "Pendiente de ejecución",
+
+  "CP002_ID": "CP-002",
+  "CP002_ESCENARIO": "ESC-002",
+  "CP002_DATOS": "POST /api/products con body: {\"name\": \"\", \"description\": \"Test\", \"price\": -100, \"quantity\": null}",
+  "CP002_PASOS": "1. Enviar POST /api/products con name vacío, price negativo y quantity null\n2. Verificar que la respuesta indica error de validación\n3. Verificar que se mencionan los campos: name ('El nombre es obligatorio'), price ('El precio debe ser positivo'), quantity ('La cantidad es obligatoria')\n4. Verificar que no se creó ningún registro en la base de datos",
+  "CP002_ESPERADO": "La API retorna un error con los mensajes de validación de los tres campos inválidos. No se persiste ningún producto.",
+  "CP002_OBTENIDO": "Pendiente de ejecución",
+
+  "CP003_ID": "CP-003",
+  "CP003_ESCENARIO": "ESC-003",
+  "CP003_DATOS": "ID inexistente: 999999",
+  "CP003_PASOS": "1. Enviar GET /api/products/999999\n2. Verificar respuesta HTTP 404\n3. Enviar PUT /api/products/999999 con body válido: {\"name\": \"Test\", \"price\": 10.0, \"quantity\": 1}\n4. Verificar respuesta HTTP 404\n5. Enviar DELETE /api/products/999999\n6. Verificar respuesta HTTP 404",
+  "CP003_ESPERADO": "Las tres operaciones (GET, PUT, DELETE) retornan HTTP 404 sin causar errores 500.",
+  "CP003_OBTENIDO": "Pendiente de ejecución",
+
+  "DDS_INTRODUCCION": "Este documento describe el diseño técnico del sistema CRUD Backend v1.0.0. Detalla la arquitectura en capas, los módulos, las clases, el flujo de datos, los endpoints REST, y las decisiones de diseño, todo derivado directamente del análisis del código fuente Java del proyecto.",
+  "ARQUITECTURA": "El sistema implementa una arquitectura en capas (Layered Architecture) con el patrón MVC adaptado para APIs REST:\n\n1. Capa de Presentación (Controller): ProductController expone endpoints REST. GlobalExceptionHandler centraliza el manejo de errores. WebConfig configura CORS, Jackson y message converters.\n2. Capa de Negocio (Service): ProductService implementa la lógica de negocio con gestión transaccional (@Transactional). Contiene validaciones de existencia de recursos.\n3. Capa de Persistencia (Repository): ProductRepository encapsula el acceso a datos usando EntityManager (JPA). Implementa CRUD con consultas JPQL.\n4. Capa de Modelo: Product es la entidad JPA mapeada a la tabla 'products' con validación Jakarta Bean Validation.\n5. Capa de Configuración: AppConfig (DataSource, EntityManager, TransactionManager), WebConfig (CORS, Jackson), AppInitializer (Servlet mapping).\n\nEl despliegue se realiza como WAR sobre Tomcat 10.1, contenerizado con Docker (multi-stage build).",
+  "DIAGRAMA_COMPONENTES": "com.crud.backend\n├── config/\n│   ├── AppConfig.java              [DataSource HikariCP, EntityManager, TransactionManager]\n│   ├── AppInitializer.java          [Servlet Initializer, CharacterEncodingFilter UTF-8]\n│   └── WebConfig.java               [CORS *, Jackson ObjectMapper, JavaTimeModule]\n├── controller/\n│   ├── ProductController.java       [REST endpoints: GET/POST/PUT/DELETE /api/products]\n│   └── GlobalExceptionHandler.java  [Manejo centralizado de excepciones @RestControllerAdvice]\n├── service/\n│   └── ProductService.java          [Lógica de negocio, @Transactional]\n├── repository/\n│   └── ProductRepository.java       [EntityManager JPA, JPQL queries]\n└── model/\n    └── Product.java                 [Entidad JPA @Entity, Jakarta Validation]\n\nDependencias:\n  ProductController ──usa──> ProductService\n  ProductService ──usa──> ProductRepository\n  ProductRepository ──usa──> EntityManager (JPA)\n  AppConfig ──configura──> DataSource (HikariCP → MySQL)\n  AppConfig ──configura──> EntityManagerFactory (Hibernate)\n  AppConfig ──configura──> TransactionManager",
+
+  "MOD001_NOMBRE": "Módulo REST Controller",
+  "MOD001_CLASE": "ProductController.java + GlobalExceptionHandler.java",
+  "MOD001_RESPONSABILIDAD": "Exposición de endpoints REST (/api/products) con operaciones CRUD. Deserialización/serialización JSON. Validación de entrada con @Valid. Manejo centralizado de excepciones con respuestas JSON estructuradas.",
+  "MOD001_DEPENDENCIAS": "ProductService, Jakarta Validation, Spring MVC (@RestController, @RequestMapping, ResponseEntity)",
+
+  "MOD002_NOMBRE": "Módulo Service",
+  "MOD002_CLASE": "ProductService.java",
+  "MOD002_RESPONSABILIDAD": "Implementación de lógica de negocio para operaciones CRUD. Gestión transaccional (lectura: readOnly=true, escritura: transaccional). Validación de existencia de recursos antes de update/delete con RuntimeException.",
+  "MOD002_DEPENDENCIAS": "ProductRepository, Spring TX (@Transactional)",
+
+  "MOD003_NOMBRE": "Módulo Repository + Model",
+  "MOD003_CLASE": "ProductRepository.java + Product.java",
+  "MOD003_RESPONSABILIDAD": "ProductRepository: Acceso a datos con EntityManager JPA. Operaciones: findAll (JPQL ORDER BY DESC), findById, save (persist/merge), deleteById, existsById. Product: Entidad JPA mapeada a tabla 'products' con 7 campos, validación Jakarta, timestamps automáticos (@PrePersist, @PreUpdate).",
+  "MOD003_DEPENDENCIAS": "Jakarta Persistence (JPA), Jakarta Validation, EntityManager",
+
+  "CLS001_NOMBRE": "ProductController + GlobalExceptionHandler",
+  "CLS001_PAQUETE": "com.crud.backend.controller",
+  "CLS001_METODOS": "ProductController: getAll(), getById(Long), create(@Valid Product), update(Long, @Valid Product), delete(Long). GlobalExceptionHandler: handleAll(Exception) retorna Map<String,String> con error y message.",
+  "CLS001_ATRIBUTOS": "ProductController: productService (final, inyectado por constructor). GlobalExceptionHandler: ninguno.",
+  "CLS001_TIPO": "@RestController + @RestControllerAdvice",
+
+  "CLS002_NOMBRE": "ProductService",
+  "CLS002_PAQUETE": "com.crud.backend.service",
+  "CLS002_METODOS": "findAll(): List<Product> (readOnly), findById(Long): Optional<Product> (readOnly), save(Product): Product, update(Long, Product): Product (con validación existencia), deleteById(Long): void (con validación existencia)",
+  "CLS002_ATRIBUTOS": "productRepository (final, inyectado por constructor)",
+  "CLS002_TIPO": "@Service @Transactional",
+
+  "CLS003_NOMBRE": "ProductRepository + Product",
+  "CLS003_PAQUETE": "com.crud.backend.repository / com.crud.backend.model",
+  "CLS003_METODOS": "ProductRepository: findAll(), findById(Long), save(Product), deleteById(Long), existsById(Long). Product: getters/setters para id, name, description, price, quantity, createdAt, updatedAt. Callbacks: onCreate(), onUpdate().",
+  "CLS003_ATRIBUTOS": "ProductRepository: em (EntityManager, @PersistenceContext). Product: id (Long, @Id @GeneratedValue), name (String, @NotBlank), description (String), price (Double, @NotNull @Positive), quantity (Integer, @NotNull @Positive), createdAt (LocalDateTime), updatedAt (LocalDateTime).",
+  "CLS003_TIPO": "@Repository + @Entity",
+
+  "FLUJO_DATOS": "1. ENTRADA (HTTP Request):\n   - Cliente envía petición HTTP (GET/POST/PUT/DELETE) a /api/products\n   - Spring MVC deserializa el body JSON a objeto Product (Jackson + JavaTimeModule)\n   - Jakarta Validation valida las constraints (@NotBlank, @NotNull, @Positive)\n\n2. PROCESAMIENTO:\n   a. ProductController recibe la petición y delega a ProductService\n   b. ProductService ejecuta lógica de negocio dentro de transacción Spring\n   c. ProductRepository ejecuta operaciones JPA via EntityManager\n   d. Hibernate traduce operaciones a SQL y ejecuta contra MySQL\n   e. @PrePersist/@PreUpdate generan timestamps automáticamente\n\n3. SALIDA (HTTP Response):\n   - Product se serializa a JSON con Jackson (fechas en ISO-8601)\n   - ProductController envuelve en ResponseEntity con código HTTP apropiado\n   - CORS headers se agregan automáticamente (WebConfig)\n   - Errores se manejan en GlobalExceptionHandler → JSON con error y message\n\n4. ENDPOINTS:\n   - GET    /api/products        → 200 + List<Product>\n   - GET    /api/products/{id}   → 200 + Product | 404\n   - POST   /api/products        → 201 + Product\n   - PUT    /api/products/{id}   → 200 + Product | 404\n   - DELETE /api/products/{id}   → 200 + {message} | 404",
+
+  "IO001_TIPO": "Entrada HTTP",
+  "IO001_DESC": "Peticiones REST con body JSON para crear/actualizar productos. Campos: name (String, obligatorio), description (String, opcional), price (Double, obligatorio, positivo), quantity (Integer, obligatorio, positivo).",
+  "IO001_VALIDACION": "Jakarta Bean Validation: @NotBlank (name), @NotNull + @Positive (price, quantity). Activada con @Valid en controller.",
+  "IO001_CLASE": "ProductController + Product",
+
+  "IO002_TIPO": "Salida HTTP",
+  "IO002_DESC": "Respuestas JSON con productos serializados. Incluye campos adicionales: id (autogenerado), createdAt y updatedAt (ISO-8601 via JavaTimeModule).",
+  "IO002_VALIDACION": "Códigos HTTP: 200 (OK), 201 (Created), 404 (Not Found), 500 (Internal Server Error). ResponseEntity tipado.",
+  "IO002_CLASE": "ProductController",
+
+  "IO003_TIPO": "Persistencia",
+  "IO003_DESC": "Operaciones CRUD en tabla 'products' de MySQL via JPA/Hibernate. HikariCP gestiona pool de 10 conexiones. Schema auto-actualizado con hbm2ddl.auto=update.",
+  "IO003_VALIDACION": "Transacciones Spring: @Transactional en Service. readOnly=true para consultas. persist() para nuevos, merge() para existentes. Validación de existencia antes de update/delete.",
+  "IO003_CLASE": "ProductRepository + AppConfig",
+
+  "DECISIONES_DISENO": "1. **Arquitectura en capas sin Spring Boot**: Se utiliza Spring MVC puro (sin Spring Boot) con configuración programática Java (AppConfig, WebConfig, AppInitializer), dando control total sobre la configuración del contenedor y eliminando la auto-configuración.\n\n2. **EntityManager directo sin Spring Data JPA**: El repositorio usa EntityManager con @PersistenceContext en lugar de extender JpaRepository de Spring Data. Esto da control explícito sobre las consultas JPQL y las operaciones de persistencia (persist vs merge).\n\n3. **Inyección por constructor**: Tanto ProductController como ProductService usan inyección de dependencias por constructor (no @Autowired en campos), siguiendo las mejores prácticas de Spring para testabilidad e inmutabilidad.\n\n4. **Manejo de errores centralizado**: GlobalExceptionHandler con @RestControllerAdvice captura todas las excepciones y retorna JSON estructurado con el nombre de la excepción y mensaje, además de loguear el stack trace completo.\n\n5. **Configuración externalizada via variables de entorno**: La conexión a MySQL se configura con variables de entorno (MYSQL_URL, MYSQL_USER, MYSQL_PASSWORD) con valores por defecto para desarrollo local, facilitando el despliegue en Docker sin modificar código.\n\n6. **Docker multi-stage build**: El Dockerfile usa dos etapas (build con Maven + ejecución con Tomcat 10.1), optimizando el tamaño de la imagen final al no incluir herramientas de compilación.\n\n7. **CORS abierto**: Se configura allowedOrigins('*') para permitir consumo desde cualquier frontend, adecuado para desarrollo. En producción se debería restringir a dominios específicos.\n\n8. **Timestamps automáticos con JPA callbacks**: @PrePersist y @PreUpdate en Product generan createdAt y updatedAt automáticamente, sin necesidad de lógica en el service layer."
+}
